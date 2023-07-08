@@ -10,7 +10,7 @@ const { SECRET = "secret" } = process.env;
 
 // Signup route to create a new user
 router.post("/signup", async (req, res) => {
-  const { User } = req.context.models;
+  const { User } = req.context.models; // see createContext in middleware.js
   try {
     // hash the password
     req.body.password = await bcrypt.hash(req.body.password, 10);
@@ -37,10 +37,10 @@ router.post("/login", async (req, res) => {
         const token = await jwt.sign({ username: user.username }, SECRET);
         res.json({ token });
       } else {
-        res.status(400).json({ error: "password doesn't match" });
+        res.status(400).json({ error: "wrong credentials" }); // wrong pwd
       }
     } else {
-      res.status(400).json({ error: "User doesn't exist" });
+      res.status(400).json({ error: "wrong credentials" }); // user doesn't exist
     }
   } catch (error) {
     res.status(400).json({ error });
