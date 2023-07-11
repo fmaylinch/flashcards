@@ -2,6 +2,7 @@ require("dotenv").config(); // loading env variables
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const Todo = require("../models/Todo");
+const Card = require("../models/Card");
 
 // CREATE CONTEXT MIDDLEWARE
 const createContext = (req, res, next) => {
@@ -10,6 +11,7 @@ const createContext = (req, res, next) => {
     models: {
       User,
       Todo,
+      Card,
     },
   };
   next();

@@ -5,6 +5,7 @@ const {log} = require("mercedlogger") // import mercedlogger's log function
 const cors = require("cors") // import cors
 const UserRouter = require("./controllers/User") //import User Routes
 const TodoRouter = require("./controllers/Todo") // import Todo Routes
+const CardRouter = require("./controllers/Card") // import Card Routes
 const {createContext} = require("./controllers/middleware")
 
 //DESTRUCTURE ENV VARIABLES WITH DEFAULT VALUES
@@ -24,8 +25,9 @@ app.use(createContext) // create req.context
 app.get("/", (req, res) => {
     res.send("this is the test route to make sure server is working")
 })
-app.use("/user", UserRouter) // send all "/user" requests to UserRouter for routing
-app.use("/todos", TodoRouter) // send all "/todos" request to TodoROuter
+app.use("/user", UserRouter) // send all "/user" requests to UserRouter
+app.use("/todos", TodoRouter) // send all "/todos" request to TodoRouter
+app.use("/cards", CardRouter) // send all "/cards" request to CardRouter
 
 // APP LISTENER
 app.listen(PORT, () => log.green("SERVER STATUS", `Listening on port ${PORT}`))
