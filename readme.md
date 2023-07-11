@@ -1,6 +1,9 @@
 # Flashcards
 
-Work in progress
+(Work in progress)
+
+Frontend part:
+- https://github.com/fmaylinch/flashcards-rn
 
 ## Sample calls
 
