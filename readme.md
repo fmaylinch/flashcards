@@ -29,9 +29,17 @@ curl -s -X POST \
 
 # controllers/Card.js
 
-curl \
+# Get cards (of auth user)
+curl -s \
   -H "Content-Type: application/json" \
   -H "$AUTH" \
+  $SERVER/cards | jq
+
+# Add card (for auth user)
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -H "$AUTH" \
+  -d '{"front":"車","back":"car","tags":["sample"],"deadline":"2023-07-20"}' \
   $SERVER/cards
 
 # controllers/Todo.js (model from the original example)

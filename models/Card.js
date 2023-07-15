@@ -7,9 +7,10 @@ const CardSchema = new Schema({
     back: {type: String, required: true},
     files: {type: [String], required: true, default: []},
     tags: {type: [String], required: true, default: []},
-    rating: {type: Number, required: true, default: 50}, // 0..100
-    //deadline: {type: Date, required: true},
-    //archived: {type: Boolean, required: true, default: false},
+    rating: {type: Number, required: true, default: 0}, // 0-new word, 100-mastered
+    orientation: {type: Number, required: true, default: 2}, // 1-front, 2-both, 3-back
+    deadline: {type: Date, required: true},
+    archived: {type: Boolean, required: true, default: false},
 })
 
 // Card model
