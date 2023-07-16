@@ -6,9 +6,12 @@ const CardSchema = new Schema({
     front: {type: String, required: true},
     back: {type: String, required: true},
     files: {type: [String], required: true, default: []},
+    tts: {type: Boolean, required: true, default: false}, // use TTS
     tags: {type: [String], required: true, default: []},
     rating: {type: Number, required: true, default: 0}, // 0-new word, 100-mastered
     orientation: {type: Number, required: true, default: 2}, // 1-front, 2-both, 3-back
+    created: {type: Date, required: true},
+    updated: {type: Date, required: true},
     deadline: {type: Date, required: true},
     archived: {type: Boolean, required: true, default: false},
 })

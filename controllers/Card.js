@@ -1,6 +1,13 @@
 const { Router } = require("express"); // import Router from express
 const { isLoggedIn } = require("./middleware"); // import isLoggedIn custom middleware
 
+// For TTS
+const textToSpeech = require('@google-cloud/text-to-speech');
+const client = new textToSpeech.TextToSpeechClient();
+const fs = require('fs');
+const util = require('util');
+const writeFile = util.promisify(fs.writeFile);
+
 const router = Router();
 
 //custom middleware could also be set at the router level like so
@@ -33,9 +40,36 @@ router.get("/:id", isLoggedIn, async (req, res) => {
 
 // create Route with isLoggedIn middleware
 router.post("/", isLoggedIn, async (req, res) => {
+
+  if (req.body.tts && req.body.files) {
+    res.status(400).json({
+      // we could allow mixing custom files with TTS-generated files
+      error: "If tts is used, don't specify files, they will be automatically generated"
+    });
+    return;
+  }
+
+  if (req.body.tts) {
+    try {
+      req.body.files = await generateTTS(req.body.front, req.body.back);
+    } catch(error) {
+      console.log("Error in generateTTS", error);
+      res.status(500).json({ error });
+      return;
+    }
+  }
+
   const { Card } = req.context.models;
   const { username } = req.user; // get username from req.user property created by isLoggedIn middleware
   req.body.username = username; // add username property to req.body
+
+  const now = new Date();
+  req.body.created = now;
+  req.body.updated = now;
+  if (!req.body.deadline) {
+    req.body.deadline = now;
+  }
+
   //create new card and send it in response
   res.json(
     await Card.create(req.body).catch((error) =>
@@ -70,5 +104,43 @@ router.delete("/:id", isLoggedIn, async (req, res) => {
     )
   );
 });
+
+const {FILES_FOLDER = "files"} = process.env
+
+// Generates audio file(s) for text.
+// Returns array of files generated.
+// The suggested filename might be cleaned/renamed.
+async function generateTTS(text, filename) {
+  // safe filename - TODO: check if exists
+  filename = filename
+    .replaceAll(" ", "-").replace(/[^\w\-]+/g,"")
+    .substring(0, 20).toLowerCase();
+
+  const dateStr = dateToString(new Date());
+  const finalFilename = `${dateStr}-${filename}.wav`
+  const outputFile = `${FILES_FOLDER}/audio/${finalFilename}`;
+
+  const request = {
+    input: {text},
+    voice: {languageCode: 'ja-JP', name: 'ja-JP-Neural2-B'},
+    audioConfig: {audioEncoding: "LINEAR16"},
+  };
+
+  console.log("Sending TTS request", request);
+  const [response] = await client.synthesizeSpeech(request);
+
+  console.log(`Writing audio content to file: ${outputFile}`);
+  await writeFile(outputFile, response.audioContent, 'binary');
+  console.log(`Audio content written to file: ${outputFile}`);
+
+  return [finalFilename];
+}
+
+function dateToString(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 module.exports = router;
