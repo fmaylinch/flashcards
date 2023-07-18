@@ -14,17 +14,19 @@ const {PORT = 3000} = process.env
 // Create Application Object
 const app = express()
 
+const {FILES_FOLDER = "files"} = process.env
+
 // GLOBAL MIDDLEWARE
 app.use(cors()) // add cors headers
 app.use(morgan("tiny")) // log the request for debugging
 app.use(express.json()) // parse json bodies
 app.use(createContext) // create req.context
 
-
 // ROUTES AND ROUTES
 app.get("/", (req, res) => {
     res.send("this is the test route to make sure server is working")
 })
+app.use('/audio', express.static(`${FILES_FOLDER}/audio`));
 app.use("/user", UserRouter) // send all "/user" requests to UserRouter
 app.use("/todos", TodoRouter) // send all "/todos" request to TodoRouter
 app.use("/cards", CardRouter) // send all "/cards" request to CardRouter
