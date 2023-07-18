@@ -38,7 +38,7 @@ curl -s \
 curl -X POST \
   -H "Content-Type: application/json" \
   -H "$AUTH" \
-  -d '{"front":"車","back":"car","tags":["sample"],"deadline":"2023-07-20"}' \
+  -d '{"front":"日本語", "back":"Japanese", "tags":["sample"], "tts":true}' \
   $SERVER/cards
 
 # controllers/Todo.js (model from the original example)

@@ -107,23 +107,37 @@ router.delete("/:id", isLoggedIn, async (req, res) => {
 
 const {FILES_FOLDER = "files"} = process.env
 
+async function generateTTS(text, filename) {
+  // https://cloud.google.com/text-to-speech/docs/voices
+  const voices = ['ja-JP-Neural2-B', 'ja-JP-Neural2-C', 'ja-JP-Neural2-D'];
+  const files = [];
+  for (let i = 0; i < voices.length; i++) {
+    const voice = voices[i];
+    const file = await generateSingleTTS(text, filename, voice, i);
+    files.push(file);
+  }
+  return files;
+}
+
 // Generates audio file(s) for text.
 // Returns array of files generated.
 // The suggested filename might be cleaned/renamed.
-async function generateTTS(text, filename) {
+async function generateSingleTTS(text, filename, voice, index) {
   // safe filename - TODO: check if exists
   filename = filename
     .replaceAll(" ", "-").replace(/[^\w\-]+/g,"")
     .substring(0, 20).toLowerCase();
 
   const dateStr = dateToString(new Date());
-  const finalFilename = `${dateStr}-${filename}.wav`
+  const finalFilename = `${dateStr}-${filename}-${index}.wav`
   const outputFile = `${FILES_FOLDER}/audio/${finalFilename}`;
 
+  // https://cloud.google.com/text-to-speech/docs/samples/tts-synthesize-text-file
+  // https://cloud.google.com/text-to-speech/docs/reference/rest/v1/text/synthesize
   const request = {
     input: {text},
-    voice: {languageCode: 'ja-JP', name: 'ja-JP-Neural2-B'},
-    audioConfig: {audioEncoding: "LINEAR16"},
+    voice: {languageCode: 'ja-JP', name: voice},
+    audioConfig: {audioEncoding: "LINEAR16"}, // their MP3 encoding sounds pretty bad
   };
 
   console.log("Sending TTS request", request);
@@ -133,7 +147,7 @@ async function generateTTS(text, filename) {
   await writeFile(outputFile, response.audioContent, 'binary');
   console.log(`Audio content written to file: ${outputFile}`);
 
-  return [finalFilename];
+  return finalFilename;
 }
 
 function dateToString(date) {
