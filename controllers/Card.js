@@ -7,6 +7,7 @@ const client = new textToSpeech.TextToSpeechClient();
 const fs = require('fs');
 const util = require('util');
 const writeFile = util.promisify(fs.writeFile);
+const unlink = util.promisify(fs.unlink);
 
 const router = Router();
 
@@ -97,9 +98,26 @@ router.delete("/:id", isLoggedIn, async (req, res) => {
   const { Card } = req.context.models;
   const { username } = req.user; // get username from req.user property created by isLoggedIn middleware
   const _id = req.params.id;
-  //remove card with same id if belongs to logged in User
+
+  // Get the card and delete files first
+  const card = await Card.findOne({ username, _id }).catch((error) => {
+    res.status(400).json({ error });
+    return;
+  })
+
+  // Remove card audio files
+  for (let file of card.files) {
+    // TODO - refactor, this is used when creating a card
+    const path = `${FILES_FOLDER}/audio/${file}`;
+    // https://stackoverflow.com/q/5315138/node-remove-file
+    const result = await unlink(path);
+    // The result is the error, it's undefined if there's no error
+    console.log(`Result of unlinking '${path}'`, result);
+  }
+
+  // Remove the card
   res.json(
-    await Card.remove({ username, _id }).catch((error) =>
+    await Card.deleteOne({ username, _id }).catch((error) =>
       res.status(400).json({ error })
     )
   );
