@@ -5,6 +5,7 @@ const CardSchema = new Schema({
     username: {type: String, required: true},
     front: {type: String, required: true},
     back: {type: String, required: true},
+    notes: {type: String, required: true},
     files: {type: [String], required: true, default: []},
     tts: {type: Boolean, required: true, default: false}, // use TTS
     tags: {type: [String], required: true, default: []},
