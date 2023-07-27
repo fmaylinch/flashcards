@@ -8,6 +8,9 @@ const {DATABASE_URL} = process.env
 // CONNECT TO MONGO
 mongoose.connect = mongoose.connect(DATABASE_URL, {useNewUrlParser: true, useUnifiedTopology: true})
 
+// https://mongoosejs.com/docs/5.x/docs/deprecations.html#findandmodify
+mongoose.set('useFindAndModify', false);
+
 // CONNECTION EVENTS
 mongoose.connection
 .on("open", () => log.green("DATABASE STATE", "Connection Open"))

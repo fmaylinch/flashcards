@@ -26,7 +26,7 @@ router.get("/", isLoggedIn, async (req, res) => {
   );
 });
 
-// Show Route with isLoggedIn middleware
+// --- Get card ---
 router.get("/:id", isLoggedIn, async (req, res) => {
   const { Card } = req.context.models;
   const { username } = req.user; // get username from req.user property created by isLoggedIn middleware
@@ -39,7 +39,7 @@ router.get("/:id", isLoggedIn, async (req, res) => {
   );
 });
 
-// create Route with isLoggedIn middleware
+// --- Create card ---
 router.post("/", isLoggedIn, async (req, res) => {
 
   if (req.body.tts && req.body.files) {
@@ -71,29 +71,36 @@ router.post("/", isLoggedIn, async (req, res) => {
     req.body.deadline = now;
   }
 
-  //create new card and send it in response
-  res.json(
-    await Card.create(req.body).catch((error) =>
-      res.status(400).json({ error })
-    )
-  );
+  console.log("Creating card", req.body);
+  try {
+    const card = await Card.create(req.body);
+    res.json(card);
+  } catch(error) {
+    console.log("Error when creating card", JSON.stringify(error));
+    // TODO - why the error is not received well in the app?
+    return res.status(400).json({error: "Cannot create card"});
+  }
+
 });
 
-// update Route with isLoggedIn middleware
+// --- Update card ---
 router.put("/:id", isLoggedIn, async (req, res) => {
   const { Card } = req.context.models;
   const { username } = req.user; // get username from req.user property created by isLoggedIn middleware
-  req.body.username = username; // add username property to req.body
   const _id = req.params.id;
-  //update card with same id if belongs to logged in User
-  res.json(
-    await Card.updateOne({ username, _id }, req.body, { new: true }).catch(
-      (error) => res.status(400).json({ error })
-    )
-  );
+  req.body.updated = new Date();
+  console.log("Updating card", req.body);
+  try {
+    const card = await Card.updateOne({ username, _id }, req.body, { new: true });
+    res.json(card);
+  } catch(error) {
+    console.log("Error when updating", JSON.stringify(error));
+    // TODO - why the error is not received well in the app?
+    return res.status(400).json({error: "Cannot update card"});
+  }
 });
 
-// update Route with isLoggedIn middleware
+// --- Delete card ---
 router.delete("/:id", isLoggedIn, async (req, res) => {
   const { Card } = req.context.models;
   const { username } = req.user; // get username from req.user property created by isLoggedIn middleware
