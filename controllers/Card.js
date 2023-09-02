@@ -83,6 +83,23 @@ router.post("/", isLoggedIn, async (req, res) => {
 
 });
 
+// --- Generate card with test audio file (doesn't save the card) ---
+router.post("/tts", isLoggedIn, async (req, res) => {
+  try {
+    // Generate just one voice
+    const file = await generateSingleTTS(
+      req.body.front, 'test-listen', 'ja-JP-Neural2-C', 0, false);
+    req.body.files = [file];
+  } catch(error) {
+    console.log("Error in generateTTS", error);
+    res.status(500).json({ error });
+    return;
+  }
+
+  const card = req.body;
+  res.json(card);
+});
+
 // --- Update card ---
 router.put("/:id", isLoggedIn, async (req, res) => {
   const { Card } = req.context.models;
@@ -147,14 +164,14 @@ async function generateTTS(text, filename) {
 // Generates audio file(s) for text.
 // Returns array of files generated.
 // The suggested filename might be cleaned/renamed.
-async function generateSingleTTS(text, filename, voice, index) {
+async function generateSingleTTS(text, filename, voice, index, addDate = true) {
   // safe filename - TODO: check if exists
   filename = filename
     .replaceAll(" ", "-").replace(/[^\w\-]+/g,"")
     .substring(0, 20).toLowerCase();
 
   const dateStr = dateToString(new Date());
-  const finalFilename = `${dateStr}-${filename}-${index}.wav`
+  const finalFilename = addDate ? `${dateStr}-${filename}-${index}.wav` : `${filename}-${index}.wav`;
   const outputFile = `${FILES_FOLDER}/audio/${finalFilename}`;
 
   // https://cloud.google.com/text-to-speech/docs/samples/tts-synthesize-text-file

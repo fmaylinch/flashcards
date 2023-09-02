@@ -9,6 +9,8 @@ const CardSchema = new Schema({
     files: {type: [String], required: true, default: []},
     tts: {type: Boolean, required: true, default: false}, // use TTS
     tags: {type: [String], required: true, default: []},
+    // for phrases, list of important Japanese words
+    mainWords: {type: [String], required: false, default: []},
     rating: {type: Number, required: true, default: 0}, // 0-new word, 100-mastered
     orientation: {type: Number, required: true, default: 2}, // 1-front, 2-both, 3-back
     created: {type: Date, required: true},

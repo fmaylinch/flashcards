@@ -1,7 +1,5 @@
 # Flashcards
 
-(Work in progress)
-
 Frontend part:
 - https://github.com/fmaylinch/flashcards-rn
 
@@ -17,7 +15,7 @@ AUTH="Authorization: Bearer $TOKEN"
 # login
 curl -s -X POST \
   -H "Content-Type: application/json" \
-  -d '{"username":"may", "password":"12345"}' \
+  -d '{"username":"fmay", "password":"fkards"}' \
   $SERVER/user/login | jq
 
 # signup
@@ -40,6 +38,13 @@ curl -X POST \
   -H "$AUTH" \
   -d '{"front":"日本語", "back":"Japanese", "tags":["sample"], "tts":true}' \
   $SERVER/cards
+
+# Generate test card for audio listening
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -H "$AUTH" \
+  -d '{"front":"日本語"}' \
+  $SERVER/cards/tts
 
 # controllers/Todo.js (model from the original example)
 
