@@ -108,7 +108,9 @@ router.put("/:id", isLoggedIn, async (req, res) => {
   req.body.updated = new Date();
   console.log("Updating card", req.body);
   try {
-    const card = await Card.updateOne({ username, _id }, req.body, { new: true });
+    // Card.updateOne() doesn't return the card
+    await Card.updateOne({ username, _id }, req.body);
+    const card = await Card.findOne({ username, _id });
     res.json(card);
   } catch(error) {
     console.log("Error when updating", JSON.stringify(error));
