@@ -37,12 +37,15 @@ router.post("/login", async (req, res) => {
         const token = await jwt.sign({ username: user.username }, SECRET);
         res.json({ token });
       } else {
-        res.status(400).json({ error: "wrong credentials" }); // wrong pwd
+        console.log("wrong pass");
+        res.status(401).json({ error: "wrong credentials" }); // wrong pwd
       }
     } else {
-      res.status(400).json({ error: "wrong credentials" }); // user doesn't exist
+      console.log("wrong user");
+      res.status(401).json({ error: "wrong credentials" }); // user doesn't exist
     }
   } catch (error) {
+    console.log("other error: " + error);
     res.status(400).json({ error });
   }
 });
