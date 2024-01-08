@@ -21,7 +21,7 @@ AUTH="Authorization: Bearer $TOKEN"
 # login
 curl -s -X POST \
   -H "Content-Type: application/json" \
-  -d '{"username":"fmay", "password":"fkards"}' \
+  -d '{"username":"may", "password":"12345"}' \
   $SERVER/user/login | jq
 
 # signup
