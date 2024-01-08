@@ -1,5 +1,11 @@
 # Flashcards
 
+Setup and run:
+- Clone repository
+- `npm install`
+- Create `.env` file.
+- `npm run dev`
+
 Frontend part:
 - https://github.com/fmaylinch/flashcards-rn
 

@@ -14,7 +14,7 @@ const router = Router();
 //custom middleware could also be set at the router level like so
 // router.use(isLoggedIn) then all routes in this router would be protected
 
-// Index Route with isLoggedIn middleware
+// Get all cards (as array)
 router.get("/", isLoggedIn, async (req, res) => {
   const { Card } = req.context.models;
   const { username } = req.user; // get username from req.user property created by isLoggedIn middleware
@@ -24,6 +24,20 @@ router.get("/", isLoggedIn, async (req, res) => {
       res.status(400).json({ error })
     )
   );
+});
+
+// Get all cards (as object with array inside)
+router.get("/list", isLoggedIn, async (req, res) => {
+  const { Card } = req.context.models;
+  const { username } = req.user; // get username from req.user property created by isLoggedIn middleware
+  //send all cards with that user
+  try {
+    const cards = await Card.find({ username });
+    res.json({ cards });
+  } catch (error) {
+    console.log("Error getting cards", error);
+    res.status(500).json({ error });
+  }
 });
 
 // --- Get card ---
