@@ -6,8 +6,9 @@ Setup and run:
 - Create `.env` file.
 - `npm run dev`
 
-Frontend part:
+Frontend clients:
 - https://github.com/fmaylinch/flashcards-rn
+- https://github.com/fmaylinch/flashcards-ios
 
 ## Sample calls
 
