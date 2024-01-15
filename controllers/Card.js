@@ -92,7 +92,7 @@ router.post("/", isLoggedIn, async (req, res) => {
   } catch(error) {
     console.log("Error when creating card", JSON.stringify(error));
     // TODO - why the error is not received well in the app?
-    return res.status(400).json({error: "Cannot create card"});
+    res.status(400).json({error: "Cannot create card"});
   }
 
 });
@@ -140,10 +140,17 @@ router.delete("/:id", isLoggedIn, async (req, res) => {
   const _id = req.params.id;
 
   // Get the card and delete files first
-  const card = await Card.findOne({ username, _id }).catch((error) => {
-    res.status(400).json({ error });
-    return;
-  })
+  let card;
+  try {
+    card = await Card.findOne({ username, _id })
+  } catch(error) {
+    res.status(400).json({error: "Cannot find card to delete"});
+    return
+  }
+  if (!card) {
+    res.status(400).json({error: "Cannot find card to delete"});
+    return
+  }
 
   // Remove card audio files
   for (let file of card.files) {
@@ -155,12 +162,14 @@ router.delete("/:id", isLoggedIn, async (req, res) => {
     console.log(`Result of unlinking '${path}'`, result);
   }
 
-  // Remove the card
-  res.json(
-    await Card.deleteOne({ username, _id }).catch((error) =>
-      res.status(400).json({ error })
-    )
-  );
+  console.log("Deleting card", req.body);
+  try {
+    await Card.deleteOne({ username, _id });
+    res.json(card);
+  } catch(error) {
+    console.log("Error when deleting card", JSON.stringify(error));
+    res.status(400).json({error: "Cannot delete card"});
+  }
 });
 
 const {FILES_FOLDER = "files"} = process.env
