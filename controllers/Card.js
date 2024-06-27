@@ -176,7 +176,8 @@ const {FILES_FOLDER = "files"} = process.env
 
 async function generateTTS(text, filename) {
   // https://cloud.google.com/text-to-speech/docs/voices
-  const voices = ['ja-JP-Neural2-B', 'ja-JP-Neural2-C', 'ja-JP-Neural2-D'];
+  const voices = ['ja-JP-Neural2-B', 'ja-JP-Neural2-C']; // female / male
+  // 'ja-JP-Neural2-D' is another male voice
   const files = [];
   for (let i = 0; i < voices.length; i++) {
     const voice = voices[i];
