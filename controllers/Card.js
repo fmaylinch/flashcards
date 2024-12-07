@@ -102,8 +102,8 @@ router.post("/", isLoggedIn, async (req, res) => {
   try {
     for (const file of req.body.files) {
       const path = completeAudioFilepath(username, file);
-      uploadToS3(path);
-      // await unlink(path); // TODO: we could delete the local file (but we keep it and delete it when delete S3 object)
+      await uploadToS3(path);
+      // deleteFile(path); // we could delete the local file (but we keep it after doing deleteFromS3)
     }
 
     const card = await Card.create(req.body);
@@ -111,7 +111,7 @@ router.post("/", isLoggedIn, async (req, res) => {
     res.json(card);
   } catch(error) {
     console.log("Error when creating card", JSON.stringify(error));
-    res.status(400).json({error: "Cannot create card"}); // TODO - I think these errors are not received well in the app
+    res.status(400).json({error: "Cannot create card"}); // TODO - are these errors received well in the app?
   }
 });
 
@@ -174,16 +174,8 @@ router.delete("/:id", isLoggedIn, async (req, res) => {
   // Remove card audio files
   for (let file of card.files) {
     const path = completeAudioFilepath(username, file);
-    deleteFromS3(path);
-
-    // https://stackoverflow.com/q/5315138/node-remove-file
-    // TODO: we remove it here, because we leave the local files (even if we upload them to S3)
-    if (await exists(path)) {
-      const result = await unlink(path);
-      console.log(`Result of unlinking '${path}'`, result); // not sure about how error is detected
-    } else {
-      console.log(`Doesn't exist: '${path}'`);
-    }
+    await deleteFromS3(path);
+    await deleteFile(path); // delete the files now, because we leave them when we upload to S3
   }
 
   console.log("Deleting card", req.body);
@@ -258,37 +250,30 @@ function dateToString(date) {
 
 const bucketName = "fmaylinch-flashcards";
 
-function uploadToS3(path) {
+async function uploadToS3(path) {
   console.log(`Uploading '${path}' to S3`);
   const fileStream = fs.createReadStream(path);
   fileStream.on("error", function (err) {
-    console.log("File Error", err);
+    console.log("ReadStream encountered an error", err);
   });
 
-  const uploadParams = {
-    Bucket: bucketName,
-    Key: path,
-    Body: fileStream
-  };
-
-  s3.upload(uploadParams, function (err, data) {
-    if (err) {
-      console.log("S3 Upload ERROR", err);
-    } else {
-      console.log("S3 Upload OK", data);
-    }
-  });
+  const uploadParams = { Bucket: bucketName, Key: path, Body: fileStream };
+  await s3.upload(uploadParams).promise();
 }
 
-function deleteFromS3(path) {
+async function deleteFromS3(path) {
   const deleteParams = {Bucket: bucketName, Key: path};
-  s3.deleteObject(deleteParams, function (err, data) {
-    if (err) {
-      console.log("S3 Delete ERROR", err);
-    } else {
-      console.log("S3 Delete OK", data);
-    }
-  })
+  await s3.deleteObject(deleteParams).promise()
+}
+
+async function deleteFile(path) {
+  // https://stackoverflow.com/q/5315138/node-remove-file
+  if (await exists(path)) {
+    const result = await unlink(path);
+    console.log(`Result of unlinking '${path}'`, result); // not sure about how error is detected
+  } else {
+    console.log(`Doesn't exist: '${path}'`);
+  }
 }
 
 module.exports = router;
