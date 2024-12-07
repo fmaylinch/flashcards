@@ -10,6 +10,10 @@ const { SECRET = "secret" } = process.env;
 
 // Signup route to create a new user
 router.post("/signup", async (req, res) => {
+  if (true) {
+    res.status(400).json({ error: "signup disabled" });
+    return;
+  }
   const { User } = req.context.models; // see createContext in middleware.js
   try {
     // hash the password

@@ -27,7 +27,7 @@ app.get("/", (req, res) => {
     res.send("this is the test route to make sure server is working")
 })
 
-// TODO: use s3 when it's configured
+// TODO: migrate files to s3, and read files from s3 here (instead of folder)
 app.use('/audio', express.static(`${FILES_FOLDER}/audio`));
 
 app.use("/user", UserRouter) // send all "/user" requests to UserRouter

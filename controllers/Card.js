@@ -8,10 +8,10 @@ const fs = require('fs');
 const util = require('util');
 const writeFile = util.promisify(fs.writeFile);
 const unlink = util.promisify(fs.unlink);
+const exists = util.promisify(fs.exists);
 
 const { AWS_KEY_ID, AWS_SECRET } = process.env;
 const AWS = require("aws-sdk");
-const path = require("path");
 
 AWS.config.update({
   region: "ru-central1",
@@ -76,9 +76,11 @@ router.post("/", isLoggedIn, async (req, res) => {
     return;
   }
 
+  const { username } = req.user; // get username from req.user property created by isLoggedIn middleware
+
   if (req.body.tts) {
     try {
-      req.body.files = await generateTTS(req.body.front, req.body.back);
+      req.body.files = await generateTTS(username, req.body.front, req.body.back);
     } catch(error) {
       console.log("Error in generateTTS", error);
       res.status(500).json({ error });
@@ -87,7 +89,6 @@ router.post("/", isLoggedIn, async (req, res) => {
   }
 
   const { Card } = req.context.models;
-  const { username } = req.user; // get username from req.user property created by isLoggedIn middleware
   req.body.username = username; // add username property to req.body
 
   const now = new Date();
@@ -99,48 +100,29 @@ router.post("/", isLoggedIn, async (req, res) => {
 
   console.log("Creating card", req.body);
   try {
-    const card = await Card.create(req.body);
+    for (const file of req.body.files) {
+      const path = completeAudioFilepath(username, file);
+      uploadToS3(path);
+      // await unlink(path); // TODO: we could delete the local file (but we keep it and delete it when delete S3 object)
+    }
 
-    // TODO: this works, upload all files, swap to s3 (keep code for local files)
-    uploadToS3(completeAudioFilepath(card.files[0]));
+    const card = await Card.create(req.body);
 
     res.json(card);
   } catch(error) {
     console.log("Error when creating card", JSON.stringify(error));
-    // TODO - why the error is not received well in the app?
-    res.status(400).json({error: "Cannot create card"});
+    res.status(400).json({error: "Cannot create card"}); // TODO - I think these errors are not received well in the app
   }
-
 });
-
-function uploadToS3(file) {
-  const fileStream = fs.createReadStream(file);
-  fileStream.on("error", function (err) {
-    console.log("File Error", err);
-  });
-
-  const uploadParams = {
-    Bucket: "fmaylinch-flashcards",
-    Key: file,
-    Body: fileStream
-  };
-
-  s3.upload(uploadParams, function (err, data) {
-    if (err) {
-      console.log("Upload ERROR", err);
-    }
-    if (data) {
-      console.log("Upload OK", data.Location);
-    }
-  });
-}
 
 // --- Generate card with test audio file (doesn't save the card) ---
 router.post("/tts", isLoggedIn, async (req, res) => {
+  const { username } = req.user; // get username from req.user property created by isLoggedIn middleware
   try {
     // Generate just one voice
-    const file = await generateSingleTTS(
-      req.body.front, 'test-listen', 'ja-JP-Neural2-C', 0, false);
+    const filename = 'test-listen';
+    const voice = 'ja-JP-Neural2-C';
+    const file = await generateSingleTTS(username, req.body.front, filename, voice, 0, false);
     req.body.files = [file];
   } catch(error) {
     console.log("Error in generateTTS", error);
@@ -166,7 +148,6 @@ router.put("/:id", isLoggedIn, async (req, res) => {
     res.json(card);
   } catch(error) {
     console.log("Error when updating", JSON.stringify(error));
-    // TODO - why the error is not received well in the app?
     return res.status(400).json({error: "Cannot update card"});
   }
 });
@@ -192,12 +173,17 @@ router.delete("/:id", isLoggedIn, async (req, res) => {
 
   // Remove card audio files
   for (let file of card.files) {
-    // TODO - refactor, this is used when creating a card
-    const path = completeAudioFilepath(file);
+    const path = completeAudioFilepath(username, file);
+    deleteFromS3(path);
+
     // https://stackoverflow.com/q/5315138/node-remove-file
-    const result = await unlink(path);
-    // The result is the error, it's undefined if there's no error
-    console.log(`Result of unlinking '${path}'`, result);
+    // TODO: we remove it here, because we leave the local files (even if we upload them to S3)
+    if (await exists(path)) {
+      const result = await unlink(path);
+      console.log(`Result of unlinking '${path}'`, result); // not sure about how error is detected
+    } else {
+      console.log(`Doesn't exist: '${path}'`);
+    }
   }
 
   console.log("Deleting card", req.body);
@@ -212,14 +198,14 @@ router.delete("/:id", isLoggedIn, async (req, res) => {
 
 const {FILES_FOLDER = "files"} = process.env
 
-async function generateTTS(text, filename) {
+async function generateTTS(username, text, filename) {
   // https://cloud.google.com/text-to-speech/docs/voices
   const voices = ['ja-JP-Neural2-B', 'ja-JP-Neural2-C']; // female / male
   // 'ja-JP-Neural2-D' is another male voice
   const files = [];
   for (let i = 0; i < voices.length; i++) {
     const voice = voices[i];
-    const file = await generateSingleTTS(text, filename, voice, i);
+    const file = await generateSingleTTS(username, text, filename, voice, i);
     files.push(file);
   }
   return files;
@@ -228,7 +214,7 @@ async function generateTTS(text, filename) {
 // Generates audio file(s) for text.
 // Returns array of files generated.
 // The suggested filename might be cleaned/renamed.
-async function generateSingleTTS(text, filename, voice, index, addDate = true) {
+async function generateSingleTTS(username, text, filename, voice, index, addDate = true) {
   // safe filename - TODO: check if exists
   filename = filename
     .replaceAll(" ", "-").replace(/[^\w\-]+/g,"")
@@ -236,7 +222,7 @@ async function generateSingleTTS(text, filename, voice, index, addDate = true) {
 
   const dateStr = dateToString(new Date());
   const finalFilename = addDate ? `${dateStr}-${filename}-${index}.wav` : `${filename}-${index}.wav`;
-  const outputFile = completeAudioFilepath(finalFilename);
+  const path = completeAudioFilepath(username, finalFilename);
 
   // https://cloud.google.com/text-to-speech/docs/samples/tts-synthesize-text-file
   // https://cloud.google.com/text-to-speech/docs/reference/rest/v1/text/synthesize
@@ -249,15 +235,16 @@ async function generateSingleTTS(text, filename, voice, index, addDate = true) {
   console.log("Sending TTS request", request);
   const [response] = await client.synthesizeSpeech(request);
 
-  console.log(`Writing audio content to file: ${outputFile}`);
-  await writeFile(outputFile, response.audioContent, 'binary');
-  console.log(`Audio content written to file: ${outputFile}`);
+  console.log(`Writing audio content to file: ${path}`);
+  // TODO: containing folder must exist for this to work (e.g. files/audio/<username>)
+  await writeFile(path, response.audioContent, 'binary');
+  console.log(`Audio content written to file: ${path}`);
 
   return finalFilename;
 }
 
-function completeAudioFilepath(file) {
-  return `${FILES_FOLDER}/audio/${file}`;
+function completeAudioFilepath(username, file) {
+  return `${FILES_FOLDER}/audio/${username}/${file}`;
 }
 
 function dateToString(date) {
@@ -265,6 +252,43 @@ function dateToString(date) {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+// S3
+
+const bucketName = "fmaylinch-flashcards";
+
+function uploadToS3(path) {
+  console.log(`Uploading '${path}' to S3`);
+  const fileStream = fs.createReadStream(path);
+  fileStream.on("error", function (err) {
+    console.log("File Error", err);
+  });
+
+  const uploadParams = {
+    Bucket: bucketName,
+    Key: path,
+    Body: fileStream
+  };
+
+  s3.upload(uploadParams, function (err, data) {
+    if (err) {
+      console.log("S3 Upload ERROR", err);
+    } else {
+      console.log("S3 Upload OK", data);
+    }
+  });
+}
+
+function deleteFromS3(path) {
+  const deleteParams = {Bucket: bucketName, Key: path};
+  s3.deleteObject(deleteParams, function (err, data) {
+    if (err) {
+      console.log("S3 Delete ERROR", err);
+    } else {
+      console.log("S3 Delete OK", data);
+    }
+  })
 }
 
 module.exports = router;
