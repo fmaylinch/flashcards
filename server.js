@@ -7,6 +7,7 @@ const UserRouter = require("./controllers/User") //import User Routes
 const TodoRouter = require("./controllers/Todo") // import Todo Routes
 const CardRouter = require("./controllers/Card") // import Card Routes
 const {createContext} = require("./controllers/middleware")
+const { s3, bucketName } = require("./util/aws");
 
 //DESTRUCTURE ENV VARIABLES WITH DEFAULT VALUES
 const {PORT = 3000} = process.env
@@ -27,8 +28,23 @@ app.get("/", (req, res) => {
     res.send("this is the test route to make sure server is working")
 })
 
-// TODO: migrate files to s3, and read files from s3 here (instead of folder)
-app.use('/audio', express.static(`${FILES_FOLDER}/audio`));
+// Route to serve audio files - TODO: move to Cards controller (create another path, where username is taken from req.user)
+app.get('/audio/*', async (req, res) => {
+    const key = `files/audio/${req.params[0]}`; // TODO: refactor this, see completeAudioFilepath
+    console.log("Loading object with key: " + key)
+    try {
+        const s3Object =
+            await s3.getObject({Bucket: bucketName, Key: key}).promise();
+        console.log("ContentType: " + s3Object.ContentType)
+        // res.set('Content-Type', s3Object.ContentType); // doesn't seem to be required
+        res.send(s3Object.Body);
+    } catch (err) {
+        console.error('Error fetching object from S3:', err);
+        res.status(500).send('Error from AWS S3: ' + err.code);
+    }
+});
+// Old route to static folder
+//app.use('/audio', express.static(`${FILES_FOLDER}/audio`));
 
 app.use("/user", UserRouter) // send all "/user" requests to UserRouter
 app.use("/todos", TodoRouter) // send all "/todos" request to TodoRouter

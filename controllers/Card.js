@@ -1,7 +1,6 @@
 const { Router } = require("express"); // import Router from express
 const { isLoggedIn } = require("./middleware"); // import isLoggedIn custom middleware
 
-// For TTS
 const textToSpeech = require('@google-cloud/text-to-speech');
 const client = new textToSpeech.TextToSpeechClient();
 const fs = require('fs');
@@ -9,17 +8,7 @@ const util = require('util');
 const writeFile = util.promisify(fs.writeFile);
 const unlink = util.promisify(fs.unlink);
 const exists = util.promisify(fs.exists);
-
-const { AWS_KEY_ID, AWS_SECRET } = process.env;
-const AWS = require("aws-sdk");
-
-AWS.config.update({
-  region: "ru-central1",
-  apiVersion: "2006-03-01",
-  endpoint: "storage.yandexcloud.net",
-  credentials: { accessKeyId: AWS_KEY_ID, secretAccessKey: AWS_SECRET }
-});
-s3 = new AWS.S3();
+const { s3, bucketName } = require("../util/aws");
 
 const router = Router();
 
@@ -247,8 +236,6 @@ function dateToString(date) {
 }
 
 // S3
-
-const bucketName = "fmaylinch-flashcards";
 
 async function uploadToS3(path) {
   console.log(`Uploading '${path}' to S3`);
