@@ -36,7 +36,7 @@ app.get('/audio/*', async (req, res) => {
         const s3Object =
             await s3.getObject({Bucket: bucketName, Key: key}).promise();
         console.log("ContentType: " + s3Object.ContentType)
-        // res.set('Content-Type', s3Object.ContentType); // doesn't seem to be required
+        res.set('Content-Type', s3Object.ContentType);
         res.send(s3Object.Body);
     } catch (err) {
         console.error('Error fetching object from S3:', err);
