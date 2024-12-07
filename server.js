@@ -33,11 +33,12 @@ app.get('/audio/*', async (req, res) => {
     const key = `files/audio/${req.params[0]}`; // TODO: refactor this, see completeAudioFilepath
     console.log("Loading object with key: " + key)
     try {
-        const s3Object =
-            await s3.getObject({Bucket: bucketName, Key: key}).promise();
-        console.log("ContentType: " + s3Object.ContentType)
-        res.set('Content-Type', s3Object.ContentType);
-        res.send(s3Object.Body);
+        const stream = s3.getObject({Bucket: bucketName, Key: key}).createReadStream();
+        const filename = key.split('/').pop();
+        console.log("Sending stream with filename: " + filename);
+        res.set('Content-Disposition', `inline; filename="${filename}"`);
+        res.set('Content-Type', 'audio/x-wav');
+        stream.pipe(res);
     } catch (err) {
         console.error('Error fetching object from S3:', err);
         res.status(500).send('Error from AWS S3: ' + err.code);
