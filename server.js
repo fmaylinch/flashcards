@@ -29,7 +29,8 @@ app.get("/", (req, res) => {
 })
 
 // Route to serve audio files - TODO: move to Cards controller (create another path, where username is taken from req.user)
-app.get('/audio/*', async (req, res) => {
+// TODO: why it doesn't work from app?
+app.get('/new-audio/*', async (req, res) => {
     const key = `files/audio/${req.params[0]}`; // TODO: refactor this, see completeAudioFilepath
     console.log("Loading object with key: " + key)
     try {
@@ -44,8 +45,9 @@ app.get('/audio/*', async (req, res) => {
         res.status(500).send('Error from AWS S3: ' + err.code);
     }
 });
+
 // Old route to static folder
-//app.use('/audio', express.static(`${FILES_FOLDER}/audio`));
+app.use('/audio', express.static(`${FILES_FOLDER}/audio`));
 
 app.use("/user", UserRouter) // send all "/user" requests to UserRouter
 app.use("/todos", TodoRouter) // send all "/todos" request to TodoRouter
