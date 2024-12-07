@@ -9,6 +9,18 @@ const util = require('util');
 const writeFile = util.promisify(fs.writeFile);
 const unlink = util.promisify(fs.unlink);
 
+const { AWS_KEY_ID, AWS_SECRET } = process.env;
+const AWS = require("aws-sdk");
+const path = require("path");
+
+AWS.config.update({
+  region: "ru-central1",
+  apiVersion: "2006-03-01",
+  endpoint: "storage.yandexcloud.net",
+  credentials: { accessKeyId: AWS_KEY_ID, secretAccessKey: AWS_SECRET }
+});
+s3 = new AWS.S3();
+
 const router = Router();
 
 //custom middleware could also be set at the router level like so
@@ -88,6 +100,10 @@ router.post("/", isLoggedIn, async (req, res) => {
   console.log("Creating card", req.body);
   try {
     const card = await Card.create(req.body);
+
+    // TODO: this works, upload all files, swap to s3 (keep code for local files)
+    uploadToS3(completeAudioFilepath(card.files[0]));
+
     res.json(card);
   } catch(error) {
     console.log("Error when creating card", JSON.stringify(error));
@@ -96,6 +112,28 @@ router.post("/", isLoggedIn, async (req, res) => {
   }
 
 });
+
+function uploadToS3(file) {
+  const fileStream = fs.createReadStream(file);
+  fileStream.on("error", function (err) {
+    console.log("File Error", err);
+  });
+
+  const uploadParams = {
+    Bucket: "fmaylinch-flashcards",
+    Key: file,
+    Body: fileStream
+  };
+
+  s3.upload(uploadParams, function (err, data) {
+    if (err) {
+      console.log("Upload ERROR", err);
+    }
+    if (data) {
+      console.log("Upload OK", data.Location);
+    }
+  });
+}
 
 // --- Generate card with test audio file (doesn't save the card) ---
 router.post("/tts", isLoggedIn, async (req, res) => {
@@ -155,7 +193,7 @@ router.delete("/:id", isLoggedIn, async (req, res) => {
   // Remove card audio files
   for (let file of card.files) {
     // TODO - refactor, this is used when creating a card
-    const path = `${FILES_FOLDER}/audio/${file}`;
+    const path = completeAudioFilepath(file);
     // https://stackoverflow.com/q/5315138/node-remove-file
     const result = await unlink(path);
     // The result is the error, it's undefined if there's no error
@@ -198,7 +236,7 @@ async function generateSingleTTS(text, filename, voice, index, addDate = true) {
 
   const dateStr = dateToString(new Date());
   const finalFilename = addDate ? `${dateStr}-${filename}-${index}.wav` : `${filename}-${index}.wav`;
-  const outputFile = `${FILES_FOLDER}/audio/${finalFilename}`;
+  const outputFile = completeAudioFilepath(finalFilename);
 
   // https://cloud.google.com/text-to-speech/docs/samples/tts-synthesize-text-file
   // https://cloud.google.com/text-to-speech/docs/reference/rest/v1/text/synthesize
@@ -216,6 +254,10 @@ async function generateSingleTTS(text, filename, voice, index, addDate = true) {
   console.log(`Audio content written to file: ${outputFile}`);
 
   return finalFilename;
+}
+
+function completeAudioFilepath(file) {
+  return `${FILES_FOLDER}/audio/${file}`;
 }
 
 function dateToString(date) {

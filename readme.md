@@ -19,17 +19,17 @@ AUTH="Authorization: Bearer $TOKEN"
 
 # controllers/User.js
 
-# login
-curl -s -X POST \
-  -H "Content-Type: application/json" \
-  -d '{"username":"may", "password":"12345"}' \
-  $SERVER/user/login | jq
-
 # signup
 curl -s -X POST \
   -H "Content-Type: application/json" \
   -d '{"username":"may", "password":"12345"}' \
   $SERVER/user/signup | jq
+
+# login
+curl -s -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"username":"may", "password":"12345"}' \
+  $SERVER/user/login | jq
 
 # controllers/Card.js
 
@@ -52,6 +52,13 @@ curl -X POST \
   -H "$AUTH" \
   -d '{"front":"日本語"}' \
   $SERVER/cards/tts
+
+# Delete card
+curl -X DELETE \
+  -H "Content-Type: application/json" \
+  -H "$AUTH" \
+  $SERVER/cards/6754489fa54084461b5bbd24
+
 
 # controllers/Todo.js (model from the original example)
 

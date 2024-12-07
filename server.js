@@ -26,7 +26,10 @@ app.use(createContext) // create req.context
 app.get("/", (req, res) => {
     res.send("this is the test route to make sure server is working")
 })
+
+// TODO: use s3 when it's configured
 app.use('/audio', express.static(`${FILES_FOLDER}/audio`));
+
 app.use("/user", UserRouter) // send all "/user" requests to UserRouter
 app.use("/todos", TodoRouter) // send all "/todos" request to TodoRouter
 app.use("/cards", CardRouter) // send all "/cards" request to CardRouter
