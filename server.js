@@ -28,18 +28,27 @@ app.get("/", (req, res) => {
     res.send("this is the test route to make sure server is working")
 })
 
-// Route to serve audio files - TODO: move to Cards controller (create another path, where username is taken from req.user)
-// TODO: why it doesn't work from app?
-app.get('/new-audio/*', async (req, res) => {
-    const key = `files/audio/${req.params[0]}`; // TODO: refactor this, see completeAudioFilepath
+// TODO: why it doesn't work from app? (the route works e.g. from a browser)
+//  For now, we're using the [/cards]/audio/:index endpoint in Card controller to generate a file in static folder,
+//  so it can be played from the static folder with the /audio endpoint below.
+app.get('/audio-s3/*', async (req, res) => {
+    const key = `files/audio/${req.params[0]}`; // see completeAudioFilepath in Card.js
     console.log("Loading object with key: " + key)
     try {
-        const stream = s3.getObject({Bucket: bucketName, Key: key}).createReadStream();
+        // Also doesn't work
+        //const stream = s3.getObject({Bucket: bucketName, Key: key}).createReadStream();
+        //const filename = key.split('/').pop();
+        //console.log("Sending stream with filename: " + filename);
+        //res.set('Content-Disposition', `inline; filename="${filename}"`);
+        //res.set('Content-Type', 'audio/x-wav');
+        //stream.pipe(res);
+
+        const s3Object = await s3.getObject({Bucket: bucketName, Key: key}).promise();
+        console.log("Content-Type: " + s3Object.ContentType)
         const filename = key.split('/').pop();
-        console.log("Sending stream with filename: " + filename);
         res.set('Content-Disposition', `inline; filename="${filename}"`);
-        res.set('Content-Type', 'audio/x-wav');
-        stream.pipe(res);
+        res.set('Content-Type', s3Object.ContentType); // doesn't seem to be required
+        res.send(s3Object.Body);
     } catch (err) {
         console.error('Error fetching object from S3:', err);
         res.status(500).send('Error from AWS S3: ' + err.code);

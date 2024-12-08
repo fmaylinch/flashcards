@@ -56,6 +56,8 @@ router.get("/:id", isLoggedIn, async (req, res) => {
 
 // --- Create card ---
 router.post("/", isLoggedIn, async (req, res) => {
+  const { Card } = req.context.models;
+  const { username } = req.user; // get username from req.user property created by isLoggedIn middleware
 
   if (req.body.tts && req.body.files) {
     res.status(400).json({
@@ -64,8 +66,6 @@ router.post("/", isLoggedIn, async (req, res) => {
     });
     return;
   }
-
-  const { username } = req.user; // get username from req.user property created by isLoggedIn middleware
 
   if (req.body.tts) {
     try {
@@ -77,7 +77,6 @@ router.post("/", isLoggedIn, async (req, res) => {
     }
   }
 
-  const { Card } = req.context.models;
   req.body.username = username; // add username property to req.body
 
   const now = new Date();
@@ -120,6 +119,34 @@ router.post("/tts", isLoggedIn, async (req, res) => {
   }
 
   const card = req.body;
+  res.json(card);
+});
+
+// --- Generate audio in static folder, so it can be played ---
+// TODO: we do this because the /audio-s3 route in server.js doesn't work
+router.post("/audio/:index", isLoggedIn, async (req, res) => {
+  const { Card } = req.context.models;
+  const { username } = req.user; // get username from req.user property created by isLoggedIn middleware
+  let card;
+
+  try {
+    const _id = req.body._id
+    card = await Card.findOne({ username, _id })
+    const fileIndex = req.params.index
+    const path = completeAudioFilepath(username, card.files[fileIndex])
+    const s3Object = await getFromS3(path);
+
+    const filename = 'temp-s3.wav';
+    const outputFilePath = completeAudioFilepath(username, filename);
+    console.log(`Writing s3 object with key ${path} to file ${outputFilePath}`)
+    fs.writeFileSync(outputFilePath, s3Object.Body);
+    card.files = [ filename ]; // similar to /tts endpoint, return temporal file
+  } catch(error) {
+    console.log("Error in generateTTS", error);
+    res.status(500).json({ error });
+    return;
+  }
+
   res.json(card);
 });
 
@@ -236,6 +263,11 @@ function dateToString(date) {
 }
 
 // S3
+
+async function getFromS3(path) {
+  console.log(`Getting '${path}' from S3`);
+  return await s3.getObject({Bucket: bucketName, Key: path}).promise();
+}
 
 async function uploadToS3(path) {
   console.log(`Uploading '${path}' to S3`);
